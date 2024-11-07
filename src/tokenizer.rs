@@ -1,11 +1,13 @@
 use nom::branch::alt;
 use nom::bytes::complete::{tag, tag_no_case, take, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit0, digit1, not_line_ending};
+use nom::character::complete::{
+    alphanumeric1, anychar, char, digit0, digit1, not_line_ending, space0,
+};
 use nom::combinator::{eof, map, opt, peek, recognize, verify};
 use nom::error::ParseError;
 use nom::error::{Error, ErrorKind};
 use nom::multi::{many0, many_m_n};
-use nom::sequence::{terminated, tuple};
+use nom::sequence::{delimited, preceded, terminated, tuple};
 use nom::{AsChar, Err, IResult};
 use std::borrow::Cow;
 use unicode_categories::UnicodeCategories;
@@ -47,6 +49,7 @@ pub(crate) struct Token<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TokenKind {
     DoubleColon,
+    InterpolatedVariable,
     Whitespace,
     String,
     Reserved,
@@ -112,6 +115,7 @@ fn get_next_token<'a>(
         .or_else(|_| get_operator_token(input))
         .or_else(|_| get_placeholder_token(input, named_placeholders))
         .or_else(|_| get_word_token(input))
+        .or_else(|_| get_interpolated_variable_token(input))
         .or_else(|_| get_any_other_char(input))
 }
 fn get_double_colon_token(input: &str) -> IResult<&str, Token<'_>> {
@@ -1065,6 +1069,23 @@ fn get_plain_reserved_two_token(input: &str) -> IResult<&str, Token<'_>> {
     }
 }
 
+fn get_interpolated_variable_token(input: &str) -> IResult<&str, Token<'_>> {
+    delimited(
+        tag("{{"),
+        preceded(space0, terminated(alphanumeric1, space0)),
+        tag("}}"),
+    )(input)
+    .map(|(input, token)| {
+        (
+            input,
+            Token {
+                kind: TokenKind::InterpolatedVariable,
+                value: token,
+                key: None,
+            },
+        )
+    })
+}
 fn get_word_token(input: &str) -> IResult<&str, Token<'_>> {
     take_while1(is_word_character)(input).map(|(input, token)| {
         (

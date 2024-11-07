@@ -83,6 +83,9 @@ pub(crate) fn format(
             TokenKind::DoubleColon => {
                 formatter.format_double_colon(token, &mut formatted_query);
             }
+            TokenKind::InterpolatedVariable => {
+                formatter.format_interpolated_variable(token, &mut formatted_query);
+            }
             _ => match token.value {
                 "," => {
                     formatter.format_comma(token, &mut formatted_query);
@@ -193,6 +196,14 @@ impl<'a> Formatter<'a> {
             query.push_str(token.value);
             query.push(' ');
         };
+    }
+    fn format_interpolated_variable(&self, token: &Token<'_>, query: &mut String) {
+        query.push_str("{{");
+        query.push(' ');
+        query.push_str(token.value);
+        query.push(' ');
+        query.push_str("}}");
+        query.push(' ');
     }
 
     // Opening parentheses increase the block indent level and start a new line

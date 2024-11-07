@@ -1682,14 +1682,14 @@ mod tests {
     #[test]
     fn it_recognizes_fmt_off() {
         let input = indoc!(
-            "SELECT              *     FROM   sometable        
+            "SELECT              *     FROM   sometable
             WHERE
             -- comment test here
                  -- fmt: off
                 first_key.second_key = 1
                                 -- json:first_key.second_key = 1
                       -- fmt: on
-                AND 
+                AND
                    -- fm1t: off
                 first_key.second_key = 1
                                     --  json:first_key.second_key = 1
@@ -1856,6 +1856,24 @@ select
   num::integer,
   data::json,
   (x - y)::integer
+from
+  foo"
+        );
+
+        assert_eq!(format(input, &QueryParams::None, &options), expected);
+    }
+    #[test]
+    fn it_handles_jinja_style_interpolation() {
+        let input = "select {{  text}}  ::text, {{num}}, {{  data  }} from foo";
+        let options = FormatOptions {
+            ..FormatOptions::default()
+        };
+        let expected = indoc!(
+            "
+select
+  {{ text }}::text,
+  {{ num }},
+  {{ data }}
 from
   foo"
         );
